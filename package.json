@@ -1,6 +1,6 @@
 {
   "name": "calcula-horas",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Script para calcular o tempo restante para completar 8h48m",
   "main": "index.js",
   "bin": {
@@ -11,6 +11,10 @@
     "trabalho",
     "cálculo"
   ],
-  "author": "Seu Nome",
-  "license": "MIT"
+  "author": "DooMWhite",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/DooMWhite/calcula-horas.git"
+  }
 }
