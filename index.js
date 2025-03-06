@@ -2,65 +2,145 @@
 
 const readline = require("readline");
 
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout,
-});
+class WorkTimeCalculator {
+  constructor() {
+    this.rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    });
+    this.records = [];
+    this.WORK_DAY_MINUTES = 528; // 8h48m padrão (8 * 60 + 48)
+  }
 
-const WORK_DAY_MINUTES = 8 * 60 + 48; // 8 horas e 48 minutos em minutos
+  parseTime(time) {
+    const [hours, minutes] = time.split(":").map(Number);
+    return hours * 60 + minutes;
+  }
 
-function parseTime(time) {
-  const [hours, minutes] = time.split(":").map(Number);
-  return hours * 60 + minutes; // Converte para minutos
-}
+  formatTime(minutes) {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
+  }
 
-function formatTime(minutes) {
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  return `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
-}
+  calculateWorkedTime() {
+    let totalMinutes = 0;
+    for (let i = 0; i < this.records.length - 1; i += 2) {
+      totalMinutes += this.records[i + 1] - this.records[i];
+    }
+    return totalMinutes;
+  }
 
-function calculateRemainingTime(records) {
-  let totalMinutes = 0;
+  calculateRemainingTime() {
+    const worked = this.calculateWorkedTime();
+    const remaining = this.WORK_DAY_MINUTES - worked;
+    return remaining > 0 ? remaining : 0;
+  }
 
-  for (let i = 0; i < records.length; i += 2) {
-    if (i + 1 < records.length) {
-      totalMinutes += records[i + 1] - records[i];
+  showHelp() {
+    console.log(`
+Comandos disponíveis:
+  help         - Mostra esta ajuda
+  set [hh:mm]  - Configura a duração do dia de trabalho (padrão: 08:48)
+  [hh:mm]      - Registra uma batida de entrada ou saída
+  done         - Calcula e mostra o horário de saída com detalhes
+  exit         - Encerra o programa
+
+Exemplo de uso:
+  08:00        (primeira entrada)
+  12:00        (saída almoço)
+  13:00        (volta almoço)
+  done         (calcula saída)
+`);
+  }
+
+  formatRecords() {
+    let result = "Batidas registradas:\n";
+    for (let i = 0; i < this.records.length; i++) {
+      const type = i % 2 === 0 ? "Entrada" : "Saída";
+      result += `${type}: ${this.formatTime(this.records[i])}\n`;
+    }
+    return result;
+  }
+
+  processInput(input) {
+    const trimmedInput = input.trim().toLowerCase();
+
+    switch (true) {
+      case trimmedInput === "help":
+        this.showHelp();
+        return true;
+
+      case trimmedInput === "exit":
+        this.rl.close();
+        return false;
+
+      case trimmedInput.startsWith("set "):
+        const time = trimmedInput.split(" ")[1];
+        try {
+          this.WORK_DAY_MINUTES = this.parseTime(time);
+          console.log(`Dia de trabalho configurado para ${time} (${this.WORK_DAY_MINUTES} minutos)`);
+        } catch {
+          console.log("Formato inválido. Use hh:mm (ex: 08:48)");
+        }
+        return true;
+
+      case trimmedInput === "done":
+        if (this.records.length === 0) {
+          console.log("Registre pelo menos uma entrada e saída antes de calcular!");
+          return true;
+        }
+        
+        const workedMinutes = this.calculateWorkedTime();
+        const remainingMinutes = this.calculateRemainingTime();
+        const lastTime = this.records[this.records.length - 1];
+        const exitTime = this.formatTime(lastTime + remainingMinutes);
+
+        console.log("\n=== Relatório Final ===");
+        console.log(this.formatRecords());
+        console.log(`Tempo total configurado: ${this.formatTime(this.WORK_DAY_MINUTES)}`);
+        console.log(`Tempo trabalhado: ${this.formatTime(workedMinutes)}`);
+        console.log(`Tempo restante: ${this.formatTime(remainingMinutes)}`);
+        console.log(`Horário de saída: ${exitTime}`);
+        console.log("==================");
+
+        this.rl.close();
+        return false;
+
+      case /^\d{2}:\d{2}$/.test(trimmedInput):
+        this.records.push(this.parseTime(trimmedInput));
+        return true;
+
+      default:
+        console.log("Comando inválido. Digite 'help' para ajuda.");
+        return true;
     }
   }
 
-  const remainingMinutes = WORK_DAY_MINUTES - totalMinutes;
-  return remainingMinutes > 0 ? remainingMinutes : 0;
+  start() {
+    const getPrompt = () => {
+      if (this.records.length === 0) return "Primeira batida (hh:mm) ou 'help': ";
+      return this.records.length % 2 === 0
+        ? "Próxima entrada (hh:mm) ou 'done': "
+        : "Próxima saída (hh:mm) ou 'done': ";
+    };
+
+    const ask = () => {
+      this.rl.question(getPrompt(), (input) => {
+        if (this.processInput(input)) {
+          ask();
+        }
+      });
+    };
+
+    console.log("Calculadora de Horas de Trabalho - Digite 'help' para ajuda");
+    ask();
+  }
 }
 
 function main() {
-  const records = [];
-
-  function askForTime(message) {
-    rl.question(message, (input) => {
-      if (input.toLowerCase() === "done") {
-        const remainingMinutes = calculateRemainingTime(records);
-        const lastTimestamp = records[records.length - 1];
-        const exitTime = formatTime(lastTimestamp + remainingMinutes);
-
-        console.log(
-          `Você deverá sair às ${exitTime} para completar 8h48m de trabalho.`
-        );
-        rl.close();
-        return;
-      }
-
-      records.push(parseTime(input));
-      const nextMessage =
-        records.length % 2 === 0
-          ? "Informe a próxima batida (hh:mm) ou 'done' para calcular: "
-          : "Informe a próxima saída (hh:mm) ou 'done' para calcular: ";
-
-      askForTime(nextMessage);
-    });
-  }
-
-  askForTime("Informe a primeira batida (hh:mm): ");
+  const calculator = new WorkTimeCalculator();
+  calculator.start();
 }
 
 main();
