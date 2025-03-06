@@ -4,9 +4,13 @@
   "description": "Script para calcular o tempo restante para completar 8h48m",
   "main": "index.js",
   "bin": {
-    "calcula-horas": "./index.js"
+    "calcula-horas": "index.js"
   },
-  "keywords": ["horas", "trabalho", "cálculo"],
+  "keywords": [
+    "horas",
+    "trabalho",
+    "cálculo"
+  ],
   "author": "Seu Nome",
   "license": "MIT"
 }
